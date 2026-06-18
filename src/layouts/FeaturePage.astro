@@ -1,0 +1,215 @@
+---
+import BaseHead from '../components/BaseHead.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  badge: string;
+  points?: string;
+  slug: string;
+}
+
+const { title, description, badge, points, slug } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+  <BaseHead title={`${title} — WLKOM`} description={description} />
+</head>
+<body>
+  <Header />
+  <main>
+    <div class="page-header">
+      <a href="/rootkit" class="back">← Rootkit</a>
+      <div class="header-row">
+        <div class="badge">{badge}</div>
+        {points && <span class="points">{points}</span>}
+      </div>
+      <h1>// {title}</h1>
+      <p class="subtitle">{description}</p>
+    </div>
+
+    <slot />
+
+  </main>
+  <Footer />
+</body>
+</html>
+
+<style is:global>
+.page-header {
+  padding: 2.5em 0 2em;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2.5em;
+}
+.back {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8em;
+  color: var(--muted);
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 1em;
+}
+.back:hover { color: var(--accent); }
+.header-row { display: flex; align-items: center; gap: 0.8em; margin-bottom: 0.6em; }
+.badge {
+  font-family: 'Courier New', monospace;
+  font-size: 0.72em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 2px 10px;
+  border-radius: 3px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.points {
+  font-family: 'Courier New', monospace;
+  font-size: 0.72em;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+h1 { font-size: 2.2em; margin-bottom: 0.25em; }
+.subtitle { color: var(--muted); font-size: 0.95em; margin: 0; }
+
+/* ── Sections ── */
+.section { margin-bottom: 3.5em; }
+.section-title {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  color: var(--accent);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 1em;
+  padding-bottom: 0.4em;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Prose ── */
+.prose { color: var(--muted); font-size: 0.92em; line-height: 1.75; }
+.prose p  { margin-bottom: 0.9em; }
+.prose p:last-child { margin-bottom: 0; }
+.prose strong { color: var(--text); font-weight: 600; }
+.prose em { color: var(--accent); font-style: normal; }
+.prose code { font-family: 'Courier New', monospace; font-size: 0.87em; color: var(--accent); background: rgba(0,255,65,0.07); padding: 1px 5px; border-radius: 3px; }
+.prose ul, .prose ol { padding-left: 1.4em; margin-bottom: 0.9em; }
+.prose li { margin-bottom: 0.35em; }
+
+/* ── Code block ── */
+.code-block {
+  background: #010409;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1em 0;
+}
+.code-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.4em 1em;
+  font-family: 'Courier New', monospace;
+  font-size: 0.78em;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.code-header .lang { color: var(--accent); opacity: 0.7; }
+.code-block pre { margin: 0; padding: 1em 1.2em; overflow-x: auto; }
+.code-block code { font-family: 'Courier New', monospace; font-size: 0.85em; color: #a5d6ff; line-height: 1.65; }
+
+/* ── Diagram box ── */
+.diagram {
+  background: #010409;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5em;
+  overflow-x: auto;
+}
+.diagram svg { display: block; width: 100%; height: auto; }
+
+/* ── Callout ── */
+.callout {
+  display: flex;
+  gap: 0.8em;
+  background: rgba(0,255,65,0.05);
+  border: 1px solid rgba(0,255,65,0.2);
+  border-radius: 6px;
+  padding: 0.9em 1em;
+  margin: 1em 0;
+}
+.callout-warn { background: rgba(227,179,65,0.06); border-color: rgba(227,179,65,0.25); }
+.callout-icon { flex-shrink: 0; font-size: 0.95em; padding-top: 2px; }
+.callout p { color: var(--muted); font-size: 0.87em; margin: 0; line-height: 1.6; }
+.callout strong { color: var(--text); }
+
+/* ── Key-value grid ── */
+.kv-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.kv-item {
+  background: var(--surface);
+  padding: 0.85em 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.kv-key {
+  font-family: 'Courier New', monospace;
+  font-size: 0.68em;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.kv-item code {
+  font-size: 0.86em;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: 'Courier New', monospace;
+}
+
+/* ── Two-column steps ── */
+.steps { display: flex; flex-direction: column; gap: 0.6em; }
+.step {
+  display: flex;
+  gap: 1em;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.85em 1em;
+  align-items: flex-start;
+}
+.step-num {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75em;
+  color: var(--accent);
+  background: rgba(0,255,65,0.08);
+  border: 1px solid rgba(0,255,65,0.2);
+  border-radius: 3px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.step-body { flex: 1; }
+.step-body strong { color: var(--text); font-size: 0.9em; display: block; margin-bottom: 0.2em; }
+.step-body p { color: var(--muted); font-size: 0.82em; margin: 0; line-height: 1.5; }
+.step-body code { font-family: 'Courier New', monospace; font-size: 0.85em; color: var(--accent); }
+
+@media (max-width: 640px) {
+  .kv-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>

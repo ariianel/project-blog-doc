@@ -1,0 +1,176 @@
+---
+import FeaturePage from '../../layouts/FeaturePage.astro';
+---
+
+<FeaturePage
+  title="Upload / Download"
+  description="Bidirectional file transfer between the attacker and the victim. Paths are encoded as URL-safe base64 directly in the URL."
+  badge="Optional"
+  points="3 pts"
+  slug="upload-download"
+>
+
+<section class="section">
+  <h2 class="section-title">// The problem</h2>
+  <div class="prose">
+    <p>
+      Transferring files between a kernel module and an HTTP server raises two non-trivial challenges:
+    </p>
+    <ul>
+      <li><strong>Binary content</strong> — kernel HTTP functions typically handle text (NUL-terminated strings). File data may contain NUL bytes, so <code>strlen()</code>-based logic breaks. We refactored the HTTP layer to track lengths explicitly.</li>
+      <li><strong>Path encoding in URL</strong> — a file path like <code>/etc/passwd</code> contains slashes that would be misinterpreted as URL path separators. The solution (suggested by a teammate) is to encode the path as <strong>URL-safe base64</strong> (<code>-</code> and <code>_</code> instead of <code>+</code> and <code>/</code>, no padding) directly in the URL.</li>
+    </ul>
+    <div class="callout">
+      <span class="callout-icon">🔑</span>
+      <p>The route <code>/api/&lt;uuid&gt;/file/&lt;path_b64&gt;</code> carries the target path as a base64 segment — no custom HTTP headers required, no parsing ambiguity.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// Download flow (victim → attacker)</h2>
+  <div class="prose">
+    <p>The C2 operator sends the action <code>download:/etc/shadow</code>. The rootkit reads the file and POSTs its raw bytes to the C2, which saves it locally.</p>
+  </div>
+  <div class="diagram">
+    <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" font-family="'Courier New',monospace">
+      <text x="100" y="28" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="bold">C2 Operator</text>
+      <text x="360" y="28" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="bold">C2 Server</text>
+      <text x="620" y="28" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="bold">Rootkit</text>
+      <line x1="100" y1="35" x2="100" y2="270" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="360" y1="35" x2="360" y2="270" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="620" y1="35" x2="620" y2="270" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <defs>
+        <marker id="a"  markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#00ff41"/></marker>
+        <marker id="ay" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#e3b341"/></marker>
+      </defs>
+      <!-- step 1 -->
+      <line x1="100" y1="60" x2="345" y2="60" stroke="#00ff41" stroke-width="1.5" marker-end="url(#a)"/>
+      <text x="225" y="53" text-anchor="middle" fill="#8b949e" font-size="10">POST /action — download:/etc/shadow</text>
+      <!-- step 2 -->
+      <line x1="360" y1="85" x2="605" y2="85" stroke="#e3b341" stroke-width="1.5" marker-end="url(#ay)"/>
+      <text x="490" y="78" text-anchor="middle" fill="#8b949e" font-size="10">200 — download:/etc/shadow (next poll)</text>
+      <!-- step 3: rootkit reads file -->
+      <rect x="550" y="95" width="140" height="20" rx="3" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="620" y="109" text-anchor="middle" fill="#8b949e" font-size="10">read_file("/etc/shadow")</text>
+      <!-- step 4: b64 encode path -->
+      <rect x="550" y="120" width="140" height="20" rx="3" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="620" y="134" text-anchor="middle" fill="#8b949e" font-size="10">b64url_encode(path) → "L2V0Yy9zaGFkb3c"</text>
+      <!-- step 5: POST file -->
+      <line x1="620" y1="155" x2="375" y2="155" stroke="#00ff41" stroke-width="1.5" marker-end="url(#a)"/>
+      <text x="495" y="148" text-anchor="middle" fill="#8b949e" font-size="10">POST /api/&lt;uuid&gt;/file/L2V0Yy9zaGFkb3c</text>
+      <text x="495" y="162" text-anchor="middle" fill="#8b949e" font-size="9">[binary body, Content-Length: N]</text>
+      <!-- step 6: C2 saves file -->
+      <rect x="290" y="172" width="140" height="20" rx="3" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="360" y="186" text-anchor="middle" fill="#8b949e" font-size="10">save to downloads/&lt;uuid&gt;/</text>
+      <!-- step 7: browser download -->
+      <line x1="360" y1="210" x2="115" y2="210" stroke="#e3b341" stroke-width="1.5" marker-end="url(#ay)"/>
+      <text x="235" y="203" text-anchor="middle" fill="#8b949e" font-size="10">GET /download/&lt;uuid&gt;/&lt;id&gt; → file attachment</text>
+    </svg>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// Upload flow (attacker → victim)</h2>
+  <div class="prose">
+    <p>The operator selects a file in the dashboard and provides a destination path on the victim. The file is staged on the C2, then served to the rootkit on the next poll cycle.</p>
+  </div>
+  <div class="diagram">
+    <svg viewBox="0 0 720 250" xmlns="http://www.w3.org/2000/svg" font-family="'Courier New',monospace">
+      <text x="100" y="28" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="bold">C2 Operator</text>
+      <text x="360" y="28" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="bold">C2 Server</text>
+      <text x="620" y="28" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="bold">Rootkit</text>
+      <line x1="100" y1="35" x2="100" y2="245" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="360" y1="35" x2="360" y2="245" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="620" y1="35" x2="620" y2="245" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <defs>
+        <marker id="b"  markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#00ff41"/></marker>
+        <marker id="by" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#e3b341"/></marker>
+      </defs>
+      <line x1="100" y1="60" x2="345" y2="60" stroke="#00ff41" stroke-width="1.5" marker-end="url(#b)"/>
+      <text x="225" y="53" text-anchor="middle" fill="#8b949e" font-size="10">POST /stage/&lt;uuid&gt; — file + dest path</text>
+      <rect x="290" y="70" width="140" height="20" rx="3" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="360" y="84" text-anchor="middle" fill="#8b949e" font-size="10">stage file → queues upload:&lt;dest&gt;</text>
+      <line x1="360" y1="107" x2="605" y2="107" stroke="#e3b341" stroke-width="1.5" marker-end="url(#by)"/>
+      <text x="490" y="100" text-anchor="middle" fill="#8b949e" font-size="10">200 — upload:/tmp/payload (next poll)</text>
+      <rect x="550" y="117" width="140" height="20" rx="3" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="620" y="131" text-anchor="middle" fill="#8b949e" font-size="10">b64url_encode("/tmp/payload")</text>
+      <line x1="620" y1="152" x2="375" y2="152" stroke="#00ff41" stroke-width="1.5" marker-end="url(#b)"/>
+      <text x="495" y="145" text-anchor="middle" fill="#8b949e" font-size="10">GET /api/&lt;uuid&gt;/file/L3RtcC9wYXlsb2Fk</text>
+      <line x1="360" y1="170" x2="605" y2="170" stroke="#e3b341" stroke-width="1.5" marker-end="url(#by)"/>
+      <text x="490" y="163" text-anchor="middle" fill="#8b949e" font-size="10">200 OK — [binary file body]</text>
+      <rect x="550" y="180" width="140" height="20" rx="3" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+      <text x="620" y="194" text-anchor="middle" fill="#8b949e" font-size="10">write_file("/tmp/payload", buf, len)</text>
+    </svg>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// Base64 URL encoding in kernel</h2>
+  <div class="prose">
+    <p>
+      Standard base64 uses <code>+</code> and <code>/</code> which conflict with URL syntax.
+      The kernel implementation uses the URL-safe alphabet (<code>A-Z a-z 0-9 - _</code>) with no padding,
+      so the encoded path is safe to embed directly as a URL segment.
+    </p>
+  </div>
+  <div class="code-block">
+    <div class="code-header"><span>rootkit/src/c2.c — b64url_encode()</span><span class="lang">C</span></div>
+    <pre><code>{`static const char b64_table[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+static int b64url_encode(const u8 *in, size_t in_len,
+                          char *out, size_t out_max)
+{
+    size_t i = 0, o = 0;
+    while (i < in_len && o + 4 < out_max) {
+        u32 v = (in[i] << 16)
+              | (i+1 < in_len ? in[i+1] << 8 : 0)
+              | (i+2 < in_len ? in[i+2]      : 0);
+        out[o++] = b64_table[(v >> 18) & 0x3f];
+        out[o++] = b64_table[(v >> 12) & 0x3f];
+        if (i + 1 < in_len) out[o++] = b64_table[(v >> 6) & 0x3f];
+        if (i + 2 < in_len) out[o++] = b64_table[ v       & 0x3f];
+        i += 3;
+    }
+    out[o] = '\\0';
+    return (int)o;
+}`}</code></pre>
+  </div>
+</section>
+
+<section class="section">
+  <h2 class="section-title">// C2 Server routes</h2>
+  <div class="steps">
+    <div class="step">
+      <span class="step-num">01</span>
+      <div class="step-body">
+        <strong>POST /stage/&lt;uuid&gt;</strong>
+        <p>Browser uploads a file + destination path. C2 saves the file locally and queues <code>upload:&lt;dest&gt;</code> for the rootkit.</p>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">02</span>
+      <div class="step-body">
+        <strong>GET /api/&lt;uuid&gt;/file/&lt;path_b64&gt;</strong>
+        <p>Rootkit fetches a staged file. C2 decodes the base64 path, finds the staged file, and streams it back as a binary response.</p>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">03</span>
+      <div class="step-body">
+        <strong>POST /api/&lt;uuid&gt;/file/&lt;path_b64&gt;</strong>
+        <p>Rootkit uploads a file from the victim. C2 decodes the path, saves the binary body to <code>downloads/&lt;uuid&gt;/</code>.</p>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">04</span>
+      <div class="step-body">
+        <strong>GET /download/&lt;uuid&gt;/&lt;transfer_id&gt;</strong>
+        <p>Browser downloads a file previously received from the victim. Served as an attachment with the original filename.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</FeaturePage>
