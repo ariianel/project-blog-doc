@@ -1,63 +1,97 @@
-# Astro Starter Kit: Blog
+# EpiRootkit — Documentation Blog
+
+Documentation blog for the [EpiRootkit](https://gitlab.com/epita) project — a Linux kernel rootkit (LKM) + Flask C2 server built at EPITA.
+
+Built with [Astro v6](https://astro.build) using the blog template, dark-themed with neon green accents.
+
+## Prerequisites
+
+- **Node.js** ≥ 18 — [nodejs.org](https://nodejs.org)
+- **npm** ≥ 9 (bundled with Node)
+
+Check your versions:
+```sh
+node -v
+npm -v
+```
+
+## Setup
 
 ```sh
-npm create astro@latest -- --template blog
+# 1. Clone the repo
+git clone https://github.com/ariianel/project-blog-doc.git
+cd project-blog-doc
+
+# 2. Install dependencies
+npm install
+
+# 3. Start the dev server
+npm run dev
+# → http://localhost:4321
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## Commands
 
-Features:
+All commands are run from the project root:
 
-- ✅ Minimal styling (make it your own!)
-- ✅ 100/100 Lighthouse performance
-- ✅ SEO-friendly with canonical URLs and Open Graph data
-- ✅ Sitemap support
-- ✅ RSS Feed support
-- ✅ Markdown & MDX support
+| Command           | Action                                      |
+| :---------------- | :------------------------------------------ |
+| `npm install`     | Install dependencies                        |
+| `npm run dev`     | Start dev server at `localhost:4321`        |
+| `npm run build`   | Build production site to `./dist/`          |
+| `npm run preview` | Preview the production build locally        |
 
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
+## Project Structure
 
 ```text
-├── public/
-├── src/
-│   ├── assets/
-│   ├── components/
-│   ├── content/
-│   ├── layouts/
-│   └── pages/
-├── astro.config.mjs
-├── README.md
-├── package.json
-└── tsconfig.json
+src/
+├── assets/           # fonts, images (pixel art rootkit image, etc.)
+├── components/       # Header, Footer, HeaderLink
+├── layouts/
+│   ├── BlogPost.astro       # blog post layout
+│   ├── FeaturePage.astro    # shared layout for all feature pages
+│   └── Layout.astro         # base HTML layout
+├── pages/
+│   ├── index.astro          # home page
+│   ├── rootkit.astro        # rootkit overview + SVG feature tree
+│   ├── architecture.astro   # system architecture
+│   ├── setup.astro          # VM setup guide
+│   ├── features/
+│   │   ├── c2-server.astro
+│   │   ├── connection.astro
+│   │   ├── exec.astro
+│   │   ├── upload-download.astro
+│   │   ├── reverse-shell.astro
+│   │   ├── hide-module.astro
+│   │   ├── hide-files.astro
+│   │   └── hide-lines.astro
+│   └── blog/                # markdown/MDX blog posts
+├── content/
+│   └── blog/                # .md / .mdx post files
+public/                      # static assets (favicon, etc.)
+astro.config.mjs
+package.json
+tsconfig.json
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Deploy to Vercel
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+The easiest way to host this blog:
 
-The `src/content/` directory contains "collections" of related Markdown and MDX documents. Use `getCollection()` to retrieve posts from `src/content/blog/`, and type-check your frontmatter using an optional schema. See [Astro's Content Collections docs](https://docs.astro.build/en/guides/content-collections/) to learn more.
+1. Push the repo to GitHub
+2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import this repo
+3. Vercel auto-detects Astro — no config needed
+4. Every `git push` to `main` triggers a redeploy automatically
 
-Any static assets, like images, can be placed in the `public/` directory.
+## Deploy to GitHub Pages
 
-## 🧞 Commands
+Update `astro.config.mjs`:
+```js
+export default defineConfig({
+  site: 'https://ariianel.github.io',
+  base: '/project-blog-doc',
+  // ...
+});
+```
 
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Check out [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
-
-## Credit
-
-This theme is based off of the lovely [Bear Blog](https://github.com/HermanMartinus/bearblog/).
+Then enable **GitHub Pages** in the repo settings (Settings → Pages → Source: GitHub Actions) and add the [official Astro GitHub Actions workflow](https://docs.astro.build/en/guides/deploy/github/).
