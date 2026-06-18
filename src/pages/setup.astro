@@ -2,12 +2,17 @@
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import { Image } from 'astro:assets';
+import c2Login from '../assets/c2-login-interface.png';
+import c2DashboardOnline from '../assets/c2-dashboard-online.png';
+import dmesgImg from '../assets/dmesg.png';
+import qemuScreen from '../assets/qemu.png';
 ---
 
 <!doctype html>
 <html lang="en">
 <head>
-	<BaseHead title="Setup — WLKOM" description="Step-by-step guide to deploy WLKOM from scratch." />
+	<BaseHead title="Setup, WLKOM" description="Step-by-step guide to deploy WLKOM from scratch." />
 </head>
 <body>
 	<Header />
@@ -25,7 +30,10 @@ import Footer from '../components/Footer.astro';
 			<ol>
 				<li><a href="#prerequisites">Prerequisites</a></li>
 				<li><a href="#qemu">Install QEMU/KVM on the host</a></li>
+				<li><a href="#distro-choice">Distro &amp; kernel version choice</a></li>
+				<li><a href="#attacker-vm">Attacker machine setup</a></li>
 				<li><a href="#victim-vm">Create the victim VM</a></li>
+				<li><a href="#victim-postinstall">Post-install configuration</a></li>
 				<li><a href="#c2-server">Deploy the C2 server</a></li>
 				<li><a href="#build-rootkit">Build the kernel module</a></li>
 				<li><a href="#load-rootkit">Load the rootkit on the victim</a></li>
@@ -35,20 +43,20 @@ import Footer from '../components/Footer.astro';
 
 		<!-- 1. Prerequisites -->
 		<section class="section" id="prerequisites">
-			<h2 class="section-title">01 — Prerequisites</h2>
+			<h2 class="section-title">01 : Prerequisites</h2>
 			<p class="section-desc">Before starting, make sure you have the following on your host machine.</p>
 
 			<div class="checklist">
 				<div class="check-item">
 					<span class="check">✓</span>
 					<div>
-						<strong>Arch Linux</strong> — the project is developed and tested on the school's Arch Linux laptops. Other distributions should work but are untested.
+						<strong>Arch Linux</strong>, the project is developed and tested on the school's Arch Linux laptops. Other distributions should work but are untested.
 					</div>
 				</div>
 				<div class="check-item">
 					<span class="check">✓</span>
 					<div>
-						<strong>CPU with hardware virtualization</strong> — Intel VT-x or AMD-V, enabled in BIOS. Check with:
+						<strong>CPU with hardware virtualization</strong>, Intel VT-x or AMD-V, enabled in BIOS. Check with:
 						<pre><code>grep -c vmx /proc/cpuinfo   # Intel (>0 means supported)
 grep -c svm /proc/cpuinfo   # AMD</code></pre>
 					</div>
@@ -56,19 +64,19 @@ grep -c svm /proc/cpuinfo   # AMD</code></pre>
 				<div class="check-item">
 					<span class="check">✓</span>
 					<div>
-						<strong>An Arch Linux ISO</strong> — download from <code>archlinux.org/download</code>. Used to install the victim VM.
+						<strong>An Arch Linux ISO</strong>, download from <code>archlinux.org/download</code>. Used to install the victim VM.
 					</div>
 				</div>
 				<div class="check-item">
 					<span class="check">✓</span>
 					<div>
-						<strong>~30 GB of free disk space</strong> — 24 GB for the victim VM disk image + build artifacts.
+						<strong>~30 GB of free disk space</strong>, 24 GB for the victim VM disk image + build artifacts.
 					</div>
 				</div>
 				<div class="check-item">
 					<span class="check">✓</span>
 					<div>
-						<strong>Python 3.10+</strong> and <strong>pip</strong> — for the C2 server.
+						<strong>Python 3.10+</strong> and <strong>pip</strong>, for the C2 server.
 					</div>
 				</div>
 			</div>
@@ -76,7 +84,7 @@ grep -c svm /proc/cpuinfo   # AMD</code></pre>
 
 		<!-- 2. Install QEMU -->
 		<section class="section" id="qemu">
-			<h2 class="section-title">02 — Install QEMU/KVM on the host</h2>
+			<h2 class="section-title">02 : Install QEMU/KVM on the host</h2>
 			<p class="section-desc">Install QEMU with KVM support and the virtfs tools needed for the shared folder.</p>
 
 			<div class="step">
@@ -113,9 +121,111 @@ lsmod | grep kvm          # should show kvm and kvm_intel/kvm_amd</code></pre>
 			</div>
 		</section>
 
-		<!-- 3. Victim VM -->
+		<!-- 3. Distro & kernel choice -->
+		<section class="section" id="distro-choice">
+			<h2 class="section-title">03 : Distro &amp; kernel version choice</h2>
+			<p class="section-desc">
+				The subject requires us to justify technically why we use this specific distribution
+				and kernel version, and what would break with a more recent one.
+			</p>
+
+			<h3 class="sub-title">Why Arch Linux?</h3>
+			<div class="info-box">
+				<p>
+					Arch Linux is a rolling-release distribution. The <code>linux</code> and <code>linux-headers</code>
+					packages always stay in sync, you never have a mismatch between the running kernel and the
+					headers used to compile out-of-tree modules. This is critical: trying to load a
+					<code>.ko</code> built against the wrong kernel version produces an immediate
+					<code>insmod: ERROR: could not insert module: Invalid module format</code>.
+				</p>
+				<p>
+					The <code>archinstall</code> scripted installer lets us version-control the full VM setup
+					(packages, bootloader, SSH config, fstab) in a JSON file, making the environment
+					100% reproducible. The school's laptops also run Arch, so package names and kernel
+					version are consistent between host and VM.
+				</p>
+			</div>
+
+			<h3 class="sub-title">Why kernel 6.6 LTS, and not newer?</h3>
+			<div class="info-box warn">
+				<strong>Three techniques break on recent kernels:</strong>
+
+				<p style="margin-top:0.8em"><strong>1. <code>kallsyms_lookup_name()</code> unexported (≥ 5.7)</strong><br/>
+				Finding the syscall table requires resolving the kernel symbol <code>sys_call_table</code>
+				(not exported). The standard approach is <code>kallsyms_lookup_name()</code>, but it was
+				removed from the exported symbol set in kernel 5.7. Our workaround: register a kprobe
+				on <code>kallsyms_lookup_name</code> itself to recover its address, then call it
+				directly via the function pointer. This works on 6.6 LTS.</p>
+
+				<p><strong>2. CR0 WP bit trick and Intel CET/IBT (≥ 6.3 on CET-capable CPUs)</strong><br/>
+				To write to the read-only syscall table page, we clear the Write-Protect (WP) bit in
+				the CPU's CR0 register. On kernels ≥ 6.3 compiled with Intel CET (Control-flow Enforcement
+				Technology) support, calling <code>write_cr0()</code> from a module triggers a
+				kernel fault on CPUs with IBT (Indirect Branch Tracking) enabled. The school's hardware
+				predates widespread CET adoption, so this works on our target. On newer machines, the
+				correct approach would be ftrace-based function hooking instead of direct pointer patching.</p>
+
+				<p><strong>3. Kernel lockdown mode</strong><br/>
+				Linux 5.4 introduced the Kernel Lockdown LSM. In confidentiality mode it blocks access
+				to <code>/proc/kallsyms</code> and prevents loading unsigned modules. Arch Linux does not
+				enable lockdown by default (no Secure Boot in QEMU by default either), so this is not
+				an issue for us, but it would block our module on a hardened Ubuntu or Fedora install.</p>
+
+				<p><strong>Verdict:</strong> We target <strong>Linux 6.6 LTS</strong> (supported until
+				December 2026) because it is the most recent LTS on which all our techniques work
+				reliably on the school's hardware without additional kernel configuration.</p>
+			</div>
+		</section>
+
+		<!-- 4. Attacker machine -->
+		<section class="section" id="attacker-vm">
+			<h2 class="section-title">04 : Attacker machine setup</h2>
+			<p class="section-desc">
+				The C2 server (attacking program) runs on the host machine or a dedicated attacker VM.
+				In our setup, we run it directly on the host for simplicity, the QEMU user networking
+				stack makes the host reachable from all VMs at <code>10.0.2.2</code>.
+			</p>
+
+			<div class="info-box">
+				<strong>Why run on the host and not a separate attacker VM?</strong><br/>
+				In a real-world scenario, the attacking program runs on a public server with a fixed IP.
+				For this pedagogical project, the host machine plays that role. QEMU's user-mode networking
+				NATs all VM traffic through the host, the VM can reach the host at <code>10.0.2.2</code>
+				(QEMU's default gateway) without any special network configuration. A separate attacker VM
+				would add complexity with no educational benefit.
+			</div>
+
+			<div class="step">
+				<div class="step-num">1</div>
+				<div class="step-body">
+					<h3>Install Python 3 and pip</h3>
+					<pre><code>sudo pacman -S python python-pip</code></pre>
+				</div>
+			</div>
+
+			<div class="step">
+				<div class="step-num">2</div>
+				<div class="step-body">
+					<h3>Clone the repository</h3>
+					<pre><code>git clone &lt;repo-url&gt;
+cd epirootkit</code></pre>
+				</div>
+			</div>
+
+			<div class="step">
+				<div class="step-num">3</div>
+				<div class="step-body">
+					<h3>Find your host IP (for the rootkit to connect to)</h3>
+					<p>From inside any QEMU VM with user networking, the host is always at:</p>
+					<pre><code>10.0.2.2</code></pre>
+					<p>This is the address you will pass to <code>insmod</code> as the <code>c2_host</code> parameter.</p>
+				</div>
+			</div>
+		</section>
+
+		<!-- 5. Victim VM -->
 		<section class="section" id="victim-vm">
-			<h2 class="section-title">03 — Create the victim VM</h2>
+			<h2 class="section-title">05 : Create the victim VM</h2>
 			<p class="section-desc">The victim runs Arch Linux with the rootkit loaded in its kernel. We automate installation with <code>archinstall</code>.</p>
 
 			<div class="step">
@@ -168,6 +278,9 @@ mount -t 9p -o trans=virtio epirootkit /mnt/share</code></pre>
 					<p>Once installation completes, shut down the VM and start it without the ISO:</p>
 					<pre><code>./start-vm.sh</code></pre>
 					<p>This starts the VM with SSH forwarded to host port <code>10022</code> and the shared folder mounted.</p>
+					<div class="screenshot-wrap">
+						<Image src={qemuScreen} width={801} height={599} alt="QEMU GRUB boot screen" class="screenshot-img" />
+					</div>
 				</div>
 			</div>
 
@@ -196,9 +309,66 @@ mount -t 9p -o trans=virtio epirootkit /mnt/share</code></pre>
 			</div>
 		</section>
 
-		<!-- 4. C2 Server -->
+		<!-- 5b. Post-install -->
+		<section class="section" id="victim-postinstall">
+			<h2 class="section-title">06 : Post-install configuration</h2>
+			<p class="section-desc">After the first boot, a few manual steps are required.</p>
+
+			<div class="step">
+				<div class="step-num">1</div>
+				<div class="step-body">
+					<h3>Verify the kernel version</h3>
+					<pre><code>ssh root@localhost -p 10022
+uname -r
+# expected: 6.6.x-arch1-1 (or similar)</code></pre>
+					<p>If the kernel is older, update with <code>pacman -Syu</code> and reboot.</p>
+				</div>
+			</div>
+
+			<div class="step">
+				<div class="step-num">2</div>
+				<div class="step-body">
+					<h3>Verify linux-headers are installed</h3>
+					<pre><code>pacman -Q linux-headers
+# should print: linux-headers 6.6.x-x</code></pre>
+					<p>If missing: <code>pacman -S linux-headers</code></p>
+				</div>
+			</div>
+
+			<div class="step">
+				<div class="step-num">3</div>
+				<div class="step-body">
+					<h3>Verify the shared folder is mounted</h3>
+					<pre><code>ls /mnt/share
+# should list the contents of virtual-machines/victim/sharedfs/</code></pre>
+					<p>If it's empty, the 9p mount failed. Check <code>dmesg | grep 9p</code> and verify
+					<code>start-vm.sh</code> includes the <code>-virtfs</code> option.</p>
+				</div>
+			</div>
+
+			<div class="step">
+				<div class="step-num">4</div>
+				<div class="step-body">
+					<h3>Verify network connectivity to the host</h3>
+					<pre><code>ping -c 3 10.0.2.2
+# 3 packets transmitted, 3 received</code></pre>
+					<p>This confirms the rootkit will be able to reach the C2 server once loaded.</p>
+				</div>
+			</div>
+
+			<div class="info-box warn">
+				<strong>Security note, PermitRootLogin</strong><br/>
+				Our <code>archinstall</code> config sets <code>PermitRootLogin yes</code> in
+				<code>/etc/ssh/sshd_config</code>. This allows password-based root login for ease of
+				deployment in a controlled lab environment. In any real scenario this would be disabled.
+				We document this explicitly because the subject requires justification for every
+				security trade-off.
+			</div>
+		</section>
+
+		<!-- 7. C2 Server -->
 		<section class="section" id="c2-server">
-			<h2 class="section-title">04 — Deploy the C2 server</h2>
+			<h2 class="section-title">07 : Deploy the C2 server</h2>
 			<p class="section-desc">The C2 server runs on your host machine (or attacker VM). It listens on port 5000.</p>
 
 			<div class="step">
@@ -229,17 +399,16 @@ ADMIN_PASSWORD=yourpassword</code></pre>
 					<pre><code>python app.py</code></pre>
 					<p>The server starts on <code>0.0.0.0:5000</code>. Open <code>http://localhost:5000</code> in your browser and log in with your <code>ADMIN_PASSWORD</code>.</p>
 
-					<div class="placeholder">
-						<div class="placeholder-icon">📸</div>
-						<p><strong>Screenshot à ajouter :</strong> page de login du dashboard C2.</p>
+					<div class="login-screenshot">
+						<Image src={c2Login} width={979} height={570} alt="WLKOM C2 login page" class="screenshot-img" />
 					</div>
 				</div>
 			</div>
 		</section>
 
-		<!-- 5. Build rootkit -->
+		<!-- 8. Build rootkit -->
 		<section class="section" id="build-rootkit">
-			<h2 class="section-title">05 — Build the kernel module</h2>
+			<h2 class="section-title">08 : Build the kernel module</h2>
 			<p class="section-desc">The rootkit must be compiled on a machine running the same kernel version as the victim VM.</p>
 
 			<div class="info-box warn">
@@ -250,7 +419,7 @@ ADMIN_PASSWORD=yourpassword</code></pre>
 				<div class="step-num">1</div>
 				<div class="step-body">
 					<h3>Copy the source to the shared folder</h3>
-					<p>From the host, copy the <code>rootkit/</code> directory into <code>virtual-machines/victim/sharedfs/</code> — it will automatically appear at <code>/mnt/share/rootkit/</code> inside the VM.</p>
+					<p>From the host, copy the <code>rootkit/</code> directory into <code>virtual-machines/victim/sharedfs/</code>, it will automatically appear at <code>/mnt/share/rootkit/</code> inside the VM.</p>
 					<pre><code>cp -r rootkit/ virtual-machines/victim/sharedfs/</code></pre>
 				</div>
 			</div>
@@ -277,9 +446,9 @@ cp /mnt/share/rootkit/src/wlkom.ko /mnt/share/wlkom.ko</code></pre>
 			</div>
 		</section>
 
-		<!-- 6. Load rootkit -->
+		<!-- 9. Load rootkit -->
 		<section class="section" id="load-rootkit">
-			<h2 class="section-title">06 — Load the rootkit on the victim</h2>
+			<h2 class="section-title">09 : Load the rootkit on the victim</h2>
 
 			<div class="step">
 				<div class="step-num">1</div>
@@ -306,28 +475,29 @@ ping 10.0.2.2</code></pre>
 					<h3>Unload the module</h3>
 					<pre><code>rmmod wlkom</code></pre>
 					<div class="info-box" style="margin-top:0.8em">
-						The module hides itself from <code>lsmod</code> — you will not see it listed. Use <code>rmmod wlkom</code> (by name) to unload it even though it is hidden.
+						The module hides itself from <code>lsmod</code>, you will not see it listed. Use <code>rmmod wlkom</code> (by name) to unload it even though it is hidden.
 					</div>
 				</div>
 			</div>
 		</section>
 
-		<!-- 7. Verify -->
+		<!-- 10. Verify -->
 		<section class="section" id="verify">
-			<h2 class="section-title">07 — Verify the connection</h2>
+			<h2 class="section-title">10 : Verify the connection</h2>
 
 			<div class="step">
 				<div class="step-num">1</div>
 				<div class="step-body">
 					<h3>Check kernel logs on the victim</h3>
 					<pre><code>dmesg | tail -20</code></pre>
-					<p>You should see:</p>
-					<pre><code>[  0.000] c2: registered uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-[  0.001] c2: polling /api/xxxxxxxx-.../action every 5s</code></pre>
+					<p>You should see something like:</p>
+					<pre><code>[ ...] wlkom: loading out-of-tree module taints kernel.
+[ ...] wlkom: module verification failed: signature or key missing - tainting kernel
+[ ...] c2: existing uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code></pre>
+					<p><code>existing</code> means the UUID was already saved from a previous load. On the very first <code>insmod</code> you will see <code>c2: registered uuid=...</code> instead.</p>
 
-					<div class="placeholder">
-						<div class="placeholder-icon">📸</div>
-						<p><strong>Screenshot à ajouter :</strong> sortie de <code>dmesg</code> montrant la registration UUID et le démarrage du polling.</p>
+					<div class="screenshot-wrap">
+						<Image src={dmesgImg} width={775} height={490} alt="dmesg output after insmod" class="screenshot-img" />
 					</div>
 				</div>
 			</div>
@@ -336,11 +506,10 @@ ping 10.0.2.2</code></pre>
 				<div class="step-num">2</div>
 				<div class="step-body">
 					<h3>Check the C2 dashboard</h3>
-					<p>Open <code>http://localhost:5000</code> — the victim machine should appear with a green online indicator.</p>
+					<p>Open <code>http://localhost:5000</code>, the victim machine should appear with a green online indicator.</p>
 
-					<div class="placeholder">
-						<div class="placeholder-icon">📸</div>
-						<p><strong>Screenshot à ajouter :</strong> dashboard C2 avec la machine victime en ligne (point vert).</p>
+					<div class="screenshot-wrap">
+						<Image src={c2DashboardOnline} width={1226} height={714} alt="C2 dashboard with victim online" class="screenshot-img" />
 					</div>
 				</div>
 			</div>
@@ -364,7 +533,7 @@ ping 10.0.2.2</code></pre>
 				<div class="step-body">
 					<h3>Confirm the module is hidden</h3>
 					<pre><code># on the victim
-lsmod | grep wlkom    # no output — the module is invisible
+lsmod | grep wlkom    # no output : the module is invisible
 ls /sys/module/       # wlkom does not appear here either</code></pre>
 				</div>
 			</div>
@@ -528,10 +697,36 @@ h1 { font-size: 2.4em; margin-bottom: 0.3em; }
 	background: rgba(227,179,65,0.04);
 	border-color: rgba(227,179,65,0.25);
 }
+.info-box.warn strong { color: #e3b341; }
+.info-box p { margin: 0.5em 0 0; line-height: 1.65; }
 
-.info-box.warn strong { color: var(--yellow); }
+.sub-title {
+	font-size: 1em;
+	color: var(--text);
+	margin: 1.5em 0 0.6em;
+}
 
 /* Placeholder */
+.login-screenshot {
+	margin: 1.5em 0;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.screenshot-wrap {
+	margin: 1.5em 0;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.screenshot-img {
+	width: 100%;
+	height: auto;
+	display: block;
+}
+
 .placeholder {
 	border: 2px dashed var(--border);
 	border-radius: 8px;

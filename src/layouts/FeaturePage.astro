@@ -9,15 +9,17 @@ interface Props {
   badge: string;
   points?: string;
   slug: string;
+  prev?: { href: string; label: string };
+  next?: { href: string; label: string };
 }
 
-const { title, description, badge, points, slug } = Astro.props;
+const { title, description, badge, points, slug, prev, next } = Astro.props;
 ---
 
 <!doctype html>
 <html lang="en">
 <head>
-  <BaseHead title={`${title} — WLKOM`} description={description} />
+  <BaseHead title={`${title}, WLKOM`} description={description} />
 </head>
 <body>
   <Header />
@@ -33,6 +35,17 @@ const { title, description, badge, points, slug } = Astro.props;
     </div>
 
     <slot />
+
+    {(prev || next) && (
+      <nav class="feat-nav">
+        {prev
+          ? <a href={prev.href} class="feat-nav-btn prev">← {prev.label}</a>
+          : <span />}
+        {next
+          ? <a href={next.href} class="feat-nav-btn next">{next.label} →</a>
+          : <span />}
+      </nav>
+    )}
 
   </main>
   <Footer />
@@ -209,7 +222,28 @@ h1 { font-size: 2.2em; margin-bottom: 0.25em; }
 .step-body p { color: var(--muted); font-size: 0.82em; margin: 0; line-height: 1.5; }
 .step-body code { font-family: 'Courier New', monospace; font-size: 0.85em; color: var(--accent); }
 
+.feat-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 3em;
+  padding-top: 1.5em;
+  border-top: 1px solid var(--border);
+}
+.feat-nav-btn {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  color: var(--accent);
+  padding: 0.5em 1.1em;
+  border: 1px solid rgba(0,255,65,0.3);
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.feat-nav-btn:hover { background: rgba(0,255,65,0.08); text-decoration: none; }
+
 @media (max-width: 640px) {
   .kv-grid { grid-template-columns: 1fr 1fr; }
+  .feat-nav { flex-direction: column; gap: 0.8em; }
 }
 </style>

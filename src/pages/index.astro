@@ -3,6 +3,8 @@ import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+import { Image } from 'astro:assets';
+import logoWlkom from '../assets/logo-wlkom.png';
 ---
 
 <!doctype html>
@@ -17,9 +19,12 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 		<!-- Hero -->
 		<section class="hero">
 			<div class="badge">SYS2 · EPITA 2026</div>
-			<h1>Wild Linux Kernel<br/><span class="accent">Object Module</span></h1>
+			<div class="hero-title">
+				<Image src={logoWlkom} width={110} height={109} alt="WLKOM logo" class="hero-logo" />
+				<h1>Wild Linux Kernel<br/><span class="accent">Object Module</span></h1>
+			</div>
 			<p class="tagline">
-				A pedagogical Linux kernel rootkit paired with a web-based C2 server —
+				A pedagogical Linux kernel rootkit paired with a web-based C2 server :
 				built to understand how rootkits work at the kernel level.
 			</p>
 			<div class="terminal">
@@ -35,7 +40,7 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 					<p><span class="comment">[  0.001] c2: hiding module from lsmod...</span></p>
 					<p><span class="comment">[  0.002] c2: polling /api/12012406-.../action every 5s</span></p>
 					<p><span class="prompt">root@victim ~#</span> lsmod | grep wlkom</p>
-					<p><span class="comment"># no output — the module is hidden</span></p>
+					<p><span class="comment"># no output, the module is hidden</span></p>
 					<p><span class="prompt">root@victim ~#</span><span class="cursor">▋</span></p>
 				</div>
 			</div>
@@ -47,13 +52,12 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 			<p class="section-desc">
 				WLKOM is a Linux Kernel Module (LKM) acting as a rootkit.
 				Once loaded on a victim machine, it silently connects to a command-and-control server
-				and awaits instructions — all while hiding itself from the system.
+				and awaits instructions, all while hiding itself from the system.
 			</p>
 			<div class="cards">
 				<a href="/features/c2-server" class="card">
 					<div class="card-header">
-						<span class="card-icon">⚔️</span>
-						<h3>C2 Server</h3>
+							<h3>C2 Server</h3>
 					</div>
 					<p>
 						A Flask web application running on the attacker's machine.
@@ -69,8 +73,7 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 				</a>
 				<a href="/rootkit" class="card">
 					<div class="card-header">
-						<span class="card-icon">👻</span>
-						<h3>Rootkit (LKM)</h3>
+							<h3>Rootkit (LKM)</h3>
 					</div>
 					<p>
 						A Linux Kernel Module loaded on the victim machine.
@@ -148,10 +151,22 @@ import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 	text-transform: uppercase;
 }
 
+.hero-title {
+	display: flex;
+	align-items: center;
+	gap: 1em;
+	margin-bottom: 0.5em;
+}
+
+.hero-logo {
+	flex-shrink: 0;
+	image-rendering: pixelated;
+}
+
 .hero h1 {
 	font-size: 3em;
 	line-height: 1.1;
-	margin-bottom: 0.5em;
+	margin-bottom: 0;
 }
 
 .accent { color: var(--accent); }

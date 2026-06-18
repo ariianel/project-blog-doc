@@ -2,12 +2,16 @@
 import BaseHead from '../../components/BaseHead.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import { Image } from 'astro:assets';
+import c2Dashboard from '../../assets/c2-dashboard.png';
+import c2Login from '../../assets/c2-login-interface.png';
+import c2Action from '../../assets/c2-action.png';
 ---
 
 <!doctype html>
 <html lang="en">
 <head>
-  <BaseHead title="C2 Server — WLKOM" description="Technical documentation of the WLKOM C2 server." />
+  <BaseHead title="C2 Server, WLKOM" description="Technical documentation of the WLKOM C2 server." />
 </head>
 <body>
   <Header />
@@ -19,7 +23,7 @@ import Footer from '../../components/Footer.astro';
       <div class="badge">Attacking program</div>
       <h1>// C2 Server</h1>
       <p class="subtitle">
-        A Flask web application that acts as the command-and-control server —
+        A Flask web application that acts as the command-and-control server :
         managing victim machines, dispatching commands, and handling file transfers.
       </p>
       <div class="tech-pills">
@@ -33,7 +37,7 @@ import Footer from '../../components/Footer.astro';
 
     <!-- 1. Overview -->
     <section class="section">
-      <h2 class="section-title">01 — Overview</h2>
+      <h2 class="section-title">01 : Overview</h2>
       <p class="section-desc">
         The C2 server is the attacker's control panel. It exposes two interfaces:
         a <strong>web dashboard</strong> for the operator, and a <strong>REST API</strong> for the rootkit.
@@ -43,7 +47,7 @@ import Footer from '../../components/Footer.astro';
       <div class="two-cols">
         <div class="col-card">
           <h3>Web Dashboard</h3>
-          <p>Password-protected interface for the operator. Shows all connected machines in real-time, lets you dispatch commands, upload/download files, and view results — all from a browser.</p>
+          <p>Password-protected interface for the operator. Shows all connected machines in real-time, lets you dispatch commands, upload/download files, and view results, all from a browser.</p>
         </div>
         <div class="col-card">
           <h3>Rootkit API</h3>
@@ -54,7 +58,7 @@ import Footer from '../../components/Footer.astro';
 
     <!-- 2. Database -->
     <section class="section">
-      <h2 class="section-title">02 — Database schema</h2>
+      <h2 class="section-title">02 : Database schema</h2>
       <p class="section-desc">
         All state is persisted in a single SQLite file (<code>c2.db</code>), managed by <code>database.py</code>.
         Four tables cover the full lifecycle of a machine interaction.
@@ -111,7 +115,7 @@ import Footer from '../../components/Footer.astro';
 
     <!-- 3. Routes -->
     <section class="section">
-      <h2 class="section-title">03 — Routes</h2>
+      <h2 class="section-title">03 : Routes</h2>
 
       <h3 class="sub-title">Frontend (operator)</h3>
       <div class="route-table-wrap">
@@ -131,12 +135,12 @@ import Footer from '../../components/Footer.astro';
             <tr>
               <td><span class="method get">GET</span></td>
               <td><code>/</code></td>
-              <td>Dashboard — list of machines, actions, results, transfers</td>
+              <td>Dashboard, list of machines, actions, results, transfers</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
               <td><code>/api/poll</code></td>
-              <td>AJAX endpoint — returns full machine state as JSON (polled every 5 s by the UI)</td>
+              <td>AJAX endpoint, returns full machine state as JSON (polled every 5 s by the UI)</td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
@@ -170,27 +174,27 @@ import Footer from '../../components/Footer.astro';
             <tr>
               <td><span class="method get">GET</span></td>
               <td><code>/register</code></td>
-              <td>Register a new machine — returns a fresh UUID as plain text</td>
+              <td>Register a new machine, returns a fresh UUID as plain text</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
               <td><code>/api/&lt;uuid&gt;/action</code></td>
-              <td>Pop the oldest pending action — returns <code>verb:args</code> or <code>204</code></td>
+              <td>Pop the oldest pending action, returns <code>verb:args</code> or <code>204</code></td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/&lt;uuid&gt;/result</code></td>
-              <td>Store command output — body: <code>command</code>, <code>exit_code</code>, <code>stdout</code>, <code>stderr</code></td>
+              <td>Store command output, body: <code>command</code>, <code>exit_code</code>, <code>stdout</code>, <code>stderr</code></td>
             </tr>
             <tr>
               <td><span class="method post">POST</span></td>
               <td><code>/api/&lt;uuid&gt;/file/&lt;path_b64&gt;</code></td>
-              <td>Receive a file from the victim (download action) — raw binary body</td>
+              <td>Receive a file from the victim (download action), raw binary body</td>
             </tr>
             <tr>
               <td><span class="method get">GET</span></td>
               <td><code>/api/&lt;uuid&gt;/file/&lt;path_b64&gt;</code></td>
-              <td>Serve a staged file to the victim (upload action) — returns raw binary</td>
+              <td>Serve a staged file to the victim (upload action), returns raw binary</td>
             </tr>
           </tbody>
         </table>
@@ -199,11 +203,10 @@ import Footer from '../../components/Footer.astro';
 
     <!-- 4. Dashboard -->
     <section class="section">
-      <h2 class="section-title">04 — Dashboard</h2>
+      <h2 class="section-title">04 : Dashboard</h2>
 
-      <div class="placeholder large">
-        <div class="placeholder-icon">📸</div>
-        <p><strong>Screenshot à ajouter :</strong> vue complète du dashboard avec une machine connectée, ses actions récentes, ses résultats et la section file transfers.</p>
+      <div class="dashboard-screenshot">
+        <Image src={c2Dashboard} width={1227} height={774} alt="WLKOM C2 dashboard" class="screenshot-img" />
       </div>
 
       <div class="feature-list">
@@ -237,17 +240,16 @@ import Footer from '../../components/Footer.astro';
         </div>
       </div>
 
-      <div class="placeholder">
-        <div class="placeholder-icon">📸</div>
-        <p><strong>Screenshot à ajouter :</strong> modal "+ Action" ouvert sur "Execute Command".</p>
+      <div class="dashboard-screenshot">
+        <Image src={c2Action} width={979} height={570} alt="C2 action selection modal" class="screenshot-img" />
       </div>
     </section>
 
     <!-- 5. Authentication -->
     <section class="section">
-      <h2 class="section-title">05 — Authentication</h2>
+      <h2 class="section-title">05 : Authentication</h2>
       <p class="section-desc">
-        The dashboard is protected by a password stored in <code>.env</code> — never hardcoded in the source.
+        The dashboard is protected by a password stored in <code>.env</code>, never hardcoded in the source.
         The rootkit API has no authentication (by design for this pedagogical project).
       </p>
 
@@ -259,19 +261,94 @@ ADMIN_PASSWORD=yourpassword</code></pre>
 
       <p class="section-desc" style="margin-top:1em">
         Sessions are managed by Flask's signed cookie mechanism using <code>SECRET_KEY</code>.
-        The <code>@login_required</code> decorator protects all operator routes — any unauthenticated
+        The <code>@login_required</code> decorator protects all operator routes, any unauthenticated
         request is redirected to <code>/login</code>.
       </p>
 
-      <div class="placeholder">
-        <div class="placeholder-icon">📸</div>
-        <p><strong>Screenshot à ajouter :</strong> page de login du C2.</p>
+      <div class="dashboard-screenshot">
+        <Image src={c2Login} width={979} height={570} alt="WLKOM C2 login page" class="screenshot-img" />
       </div>
     </section>
 
-    <!-- 6. Online detection -->
+    <!-- 6. Async interface -->
+    <section class="section" id="async">
+      <h2 class="section-title">06 : Asynchronous interface (AJAX polling)</h2>
+
+      <h3 class="sub-title">The initial problem</h3>
+      <p class="section-desc">
+        The first version of the dashboard was entirely static. After sending a command, the operator had
+        to manually reload the page to see whether the rootkit had picked it up and returned a result.
+        This was both slow and impractical: with a 5-second polling cycle on the rootkit side, the result
+        could appear at any time, and the operator had no way to know without refreshing repeatedly.
+      </p>
+
+      <h3 class="sub-title">The solution</h3>
+      <div class="info-box" style="margin-bottom:1.5em">
+        The dashboard now runs a JavaScript loop that calls <code>GET /api/poll</code> every 3 seconds.
+        The server responds with the full machine state as JSON: machine list, pending actions, results,
+        and file transfers. The JavaScript then diffs the response against the current DOM and updates
+        only what changed, with no page reload.
+      </div>
+
+      <div class="code-block">
+        <div class="code-title">index.html, polling loop (vanilla JS)</div>
+        <pre><code>{`async function poll() {
+    const res  = await fetch('/api/poll');
+    const data = await res.json();
+    updateMachines(data.machines);   // status dots
+    updateResults(data.results);     // command output
+    updateTransfers(data.transfers); // file transfer history
+}
+
+setInterval(poll, 3000);  // run every 3 s
+poll();                   // immediate first call`}</code></pre>
+      </div>
+
+      <h3 class="sub-title" style="margin-top:1.5em">Design decisions</h3>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-dot"></div>
+          <div>
+            <strong>HTTP polling over WebSockets</strong>
+            <p>
+              WebSockets would allow the server to push results instantly, but they require a persistent
+              connection and more complex server-side state. Since the rootkit itself operates on a
+              beaconing model (it checks in periodically rather than staying connected), matching the
+              dashboard to the same rhythm keeps the architecture consistent. A 3-second poll interval
+              on the frontend gives a responsive feel while the rootkit's 5-second cycle is the actual
+              bottleneck.
+            </p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-dot"></div>
+          <div>
+            <strong>Vanilla JavaScript, no framework</strong>
+            <p>
+              Using native <code>fetch()</code> and DOM APIs instead of React, Vue, or any frontend
+              framework keeps the project dependency-free on the frontend side. A C2 tool should be
+              lightweight and self-contained. Adding a build pipeline for the frontend would increase
+              complexity without meaningful benefit for a project of this size.
+            </p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-dot"></div>
+          <div>
+            <strong>Single <code>/api/poll</code> endpoint</strong>
+            <p>
+              Rather than multiple endpoints for machines, results, and transfers, a single endpoint
+              returns everything in one JSON payload. This keeps the polling logic simple: one request
+              per tick, one place to update. The payload is small enough that the overhead is negligible.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Online detection -->
     <section class="section">
-      <h2 class="section-title">06 — Online detection</h2>
+      <h2 class="section-title">07 : Online detection</h2>
       <p class="section-desc">
         There is no persistent TCP connection between the rootkit and the C2.
         Instead, the server infers connection status from the polling frequency.
@@ -281,14 +358,14 @@ ADMIN_PASSWORD=yourpassword</code></pre>
         <strong>How it works:</strong><br/>
         Every time the rootkit polls <code>GET /api/&lt;uuid&gt;/action</code>, the server updates the <code>last_seen</code>
         timestamp in the <code>machines</code> table. The dashboard considers a machine <strong>online</strong>
-        if <code>last_seen</code> is less than <strong>15 seconds</strong> ago — i.e. at most 3 missed polls (5 s interval).
+        if <code>last_seen</code> is less than <strong>15 seconds</strong> ago, i.e. at most 3 missed polls (5 s interval).
         If the rootkit is unloaded or the victim goes down, the machine turns red within 15 seconds.
       </div>
     </section>
 
     <div class="nav-bottom">
-      <a href="/features" class="btn-back">← All features</a>
-      <a href="/features/connection" class="btn-next">Connection & Polling →</a>
+      <span></span>
+      <a href="/rootkit" class="btn-next">Rootkit →</a>
     </div>
 
   </main>
@@ -534,6 +611,19 @@ h1 { font-size: 2.4em; margin-bottom: 0.3em; }
 .info-box strong { color: var(--text); }
 
 /* Placeholder */
+.dashboard-screenshot {
+  margin: 1.5em 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.screenshot-img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 .placeholder {
   border: 2px dashed var(--border);
   border-radius: 8px;

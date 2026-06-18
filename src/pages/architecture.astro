@@ -2,12 +2,15 @@
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import { Image } from 'astro:assets';
+import c2Dashboard from '../assets/c2-dashboard.png';
+import dmesgImg from '../assets/dmesg.png';
 ---
 
 <!doctype html>
 <html lang="en">
 <head>
-	<BaseHead title="Architecture — WLKOM" description="Technical architecture of the WLKOM rootkit and C2 server." />
+	<BaseHead title="Architecture, WLKOM" description="Technical architecture of the WLKOM rootkit and C2 server." />
 </head>
 <body>
 	<Header />
@@ -21,7 +24,7 @@ import Footer from '../components/Footer.astro';
 
 		<!-- 1. Global overview -->
 		<section class="section">
-			<h2 class="section-title">01 — Global overview</h2>
+			<h2 class="section-title">01 : Global overview</h2>
 			<p class="section-desc">
 				WLKOM is split into two components running on separate virtual machines hosted on the same physical laptop via QEMU/KVM.
 				The victim VM loads the kernel module, which connects back to the C2 server and polls for instructions every 5 seconds.
@@ -32,7 +35,7 @@ import Footer from '../components/Footer.astro';
 				<svg viewBox="0 0 760 340" xmlns="http://www.w3.org/2000/svg" class="arch-svg">
 					<!-- Host machine -->
 					<rect x="10" y="10" width="740" height="320" rx="10" fill="#0d1117" stroke="#30363d" stroke-width="1.5"/>
-					<text x="380" y="36" text-anchor="middle" fill="#8b949e" font-size="11" font-family="monospace" letter-spacing="2">HOST MACHINE — ARCH LINUX (SCHOOL LAPTOP)</text>
+					<text x="380" y="36" text-anchor="middle" fill="#8b949e" font-size="11" font-family="monospace" letter-spacing="2">HOST MACHINE : ARCH LINUX (SCHOOL LAPTOP)</text>
 
 					<!-- QEMU label bottom -->
 					<text x="380" y="318" text-anchor="middle" fill="#30363d" font-size="10" font-family="monospace" letter-spacing="2">QEMU / KVM HYPERVISOR</text>
@@ -97,9 +100,9 @@ import Footer from '../components/Footer.astro';
 
 		<!-- 2. C2 API Protocol -->
 		<section class="section">
-			<h2 class="section-title">02 — C2 API Protocol</h2>
+			<h2 class="section-title">02 : C2 API Protocol</h2>
 			<p class="section-desc">
-				The rootkit communicates with the C2 server over plain HTTP/1.0 — a minimal custom HTTP client implemented entirely in kernel space.
+				The rootkit communicates with the C2 server over plain HTTP/1.0, a minimal custom HTTP client implemented entirely in kernel space.
 			</p>
 
 			<div class="api-table-wrap">
@@ -156,7 +159,7 @@ import Footer from '../components/Footer.astro';
 
 					<div class="seq-step">
 						<div class="seq-arrow right"><span class="arrow-label">GET /register</span></div>
-						<div class="seq-arrow left"><span class="arrow-label response">200 — UUID</span></div>
+						<div class="seq-arrow left"><span class="arrow-label response">200, UUID</span></div>
 					</div>
 
 					<div class="seq-group">
@@ -187,7 +190,7 @@ import Footer from '../components/Footer.astro';
 						<div class="seq-group-label case">case: upload</div>
 						<div class="seq-step">
 							<div class="seq-arrow right"><span class="arrow-label">GET /api/&lt;uuid&gt;/file/&lt;path_b64&gt;</span></div>
-							<div class="seq-arrow left"><span class="arrow-label response">200 — file content</span></div>
+							<div class="seq-arrow left"><span class="arrow-label response">200, file content</span></div>
 							<div class="seq-note">write file to victim filesystem</div>
 						</div>
 					</div>
@@ -200,13 +203,13 @@ import Footer from '../components/Footer.astro';
 				<strong>Why URL-safe base64 for the path?</strong><br/>
 				File paths like <code>/etc/passwd</code> contain <code>/</code> which would break the URL routing.
 				Standard base64 uses <code>+</code> and <code>/</code> which are reserved in URLs.
-				URL-safe base64 replaces them with <code>-</code> and <code>_</code>, making the path safe to embed directly in a URL segment — without any additional encoding logic in kernel space.
+				URL-safe base64 replaces them with <code>-</code> and <code>_</code>, making the path safe to embed directly in a URL segment, without any additional encoding logic in kernel space.
 			</div>
 		</section>
 
 		<!-- 3. Rootkit module structure -->
 		<section class="section">
-			<h2 class="section-title">03 — Kernel module structure</h2>
+			<h2 class="section-title">03 : Kernel module structure</h2>
 			<p class="section-desc">The rootkit is split into focused translation units, each responsible for one feature.</p>
 
 			<div class="file-tree">
@@ -214,12 +217,12 @@ import Footer from '../components/Footer.astro';
 				<div class="tree-file">
 					<span class="tree-icon">📄</span>
 					<code>wlkom_main.c</code>
-					<span class="tree-desc">Module entry point — calls <code>hide_module()</code> then <code>c2_init()</code> on load</span>
+					<span class="tree-desc">Module entry point, calls <code>hide_module()</code> then <code>c2_init()</code> on load</span>
 				</div>
 				<div class="tree-file">
 					<span class="tree-icon">📄</span>
 					<code>c2.c</code>
-					<span class="tree-desc">HTTP/1.0 client — registration, action polling, result posting, file transfer</span>
+					<span class="tree-desc">HTTP/1.0 client, registration, action polling, result posting, file transfer</span>
 				</div>
 				<div class="tree-file">
 					<span class="tree-icon">📄</span>
@@ -234,20 +237,19 @@ import Footer from '../components/Footer.astro';
 				<div class="tree-file">
 					<span class="tree-icon">📄</span>
 					<code>utils.c</code>
-					<span class="tree-desc">Kernel VFS helpers — <code>read_file()</code> and <code>write_file()</code></span>
+					<span class="tree-desc">Kernel VFS helpers, <code>read_file()</code> and <code>write_file()</code></span>
 				</div>
 			</div>
 
 			<!-- Screenshot placeholder -->
-			<div class="placeholder">
-				<div class="placeholder-icon">📸</div>
-				<p><strong>Screenshot à ajouter :</strong> sortie de <code>dmesg | tail -20</code> juste après le <code>insmod wlkom.ko</code> — montrant l'UUID de registration et le démarrage du kthread.</p>
+			<div class="screenshot-wrap">
+				<Image src={dmesgImg} width={775} height={490} alt="dmesg output after insmod" class="screenshot-img" />
 			</div>
 		</section>
 
 		<!-- 4. Tech stack -->
 		<section class="section">
-			<h2 class="section-title">04 — Technology choices</h2>
+			<h2 class="section-title">04 : Technology choices</h2>
 
 			<div class="tech-grid">
 				<div class="tech-card">
@@ -255,7 +257,7 @@ import Footer from '../components/Footer.astro';
 						<span class="tech-lang">C</span>
 						<h3>Kernel Module</h3>
 					</div>
-					<p>The Linux kernel only exposes a C API. There is no choice — kernel modules must be written in C (or assembly). No standard library, no malloc, no userspace — everything goes through kernel APIs (<code>kmalloc</code>, <code>printk</code>, <code>sock_create_kern</code>…).</p>
+					<p>The Linux kernel only exposes a C API. There is no choice, kernel modules must be written in C (or assembly). No standard library, no malloc, no userspace, everything goes through kernel APIs (<code>kmalloc</code>, <code>printk</code>, <code>sock_create_kern</code>…).</p>
 				</div>
 				<div class="tech-card">
 					<div class="tech-header">
@@ -269,7 +271,7 @@ import Footer from '../components/Footer.astro';
 						<span class="tech-lang">QEMU</span>
 						<h3>Virtualization</h3>
 					</div>
-					<p>Required by the subject. QEMU/KVM provides hardware virtualization on the school's Arch Linux laptops. The victim VM uses user-mode networking — the host is reachable from the VM at <code>10.0.2.2</code>, which is passed as the <code>c2_host</code> parameter at <code>insmod</code> time.</p>
+					<p>Required by the subject. QEMU/KVM provides hardware virtualization on the school's Arch Linux laptops. The victim VM uses user-mode networking, the host is reachable from the VM at <code>10.0.2.2</code>, which is passed as the <code>c2_host</code> parameter at <code>insmod</code> time.</p>
 				</div>
 				<div class="tech-card">
 					<div class="tech-header">
@@ -282,18 +284,17 @@ import Footer from '../components/Footer.astro';
 
 			<div class="info-box">
 				<strong>Why this specific kernel version?</strong><br/>
-				Recent kernels (6.x+) enforce stricter security policies — in particular, lockdown mode and restricted <code>/proc/kallsyms</code> access make syscall hooking significantly harder without disabling specific kernel features. Our implementation targets kernel <strong>6.6 LTS</strong> (the default on current Arch), which still allows the syscall table manipulation used by the hide feature without requiring to disable Secure Boot or lockdown mode.
+				Recent kernels (6.x+) enforce stricter security policies, in particular, lockdown mode and restricted <code>/proc/kallsyms</code> access make syscall hooking significantly harder without disabling specific kernel features. Our implementation targets kernel <strong>6.6 LTS</strong> (the default on current Arch), which still allows the syscall table manipulation used by the hide feature without requiring to disable Secure Boot or lockdown mode.
 			</div>
 		</section>
 
 		<!-- 5. C2 dashboard screenshot placeholder -->
 		<section class="section">
-			<h2 class="section-title">05 — C2 Dashboard</h2>
+			<h2 class="section-title">05 : C2 Dashboard</h2>
 			<p class="section-desc">The web interface provides real-time visibility over connected machines.</p>
 
-			<div class="placeholder large">
-				<div class="placeholder-icon">📸</div>
-				<p><strong>Screenshot à ajouter :</strong> capture du dashboard C2 avec une machine connectée, des commandes exécutées et leur résultat, et la section file transfers.</p>
+			<div class="dashboard-screenshot">
+				<Image src={c2Dashboard} width={1227} height={774} alt="WLKOM C2 dashboard" class="screenshot-img" />
 			</div>
 		</section>
 
@@ -621,6 +622,26 @@ h1 {
 }
 
 /* ── Placeholder ── */
+.screenshot-wrap {
+	margin: 1.5em 0;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.dashboard-screenshot {
+	margin: 1.5em 0;
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.screenshot-img {
+	width: 100%;
+	height: auto;
+	display: block;
+}
+
 .placeholder {
 	border: 2px dashed var(--border);
 	border-radius: 8px;

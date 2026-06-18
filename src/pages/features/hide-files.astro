@@ -8,13 +8,15 @@ import FeaturePage from '../../layouts/FeaturePage.astro';
   badge="Optional"
   points="2 pts"
   slug="hide-files"
+  prev={{ href: "/features/hide-module", label: "Hide Module" }}
+  next={{ href: "/features/hide-lines", label: "Hide Lines" }}
 >
 
 <section class="section">
   <h2 class="section-title">// How it works</h2>
   <div class="prose">
     <p>
-      Every tool that lists files — <code>ls</code>, <code>find</code>, <code>stat</code> — eventually
+      Every tool that lists files, <code>ls</code>, <code>find</code>, <code>stat</code>, eventually
       calls the <strong><code>getdents64</code></strong> system call, which asks the kernel to fill a buffer
       with directory entries (<code>struct linux_dirent64</code>). By replacing the <code>getdents64</code>
       pointer in the kernel's <strong>syscall table</strong> with our own function, we can intercept every
@@ -117,7 +119,7 @@ bin  boot  dev  etc  home  lib  ...
 # /rootkit directory is not shown
 
 $ ls -la / | grep rootkit
-# no output — hidden at the kernel level
+# no output : hidden at the kernel level
 
 $ cat /rootkit/uuid      # but the directory IS there
 c3f9a721-...             # and accessible by root`}</code></pre>
