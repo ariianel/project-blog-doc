@@ -2,6 +2,8 @@
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import { Image } from 'astro:assets';
+import rootkitImage from '../assets/rootkit-image.png';
 
 // ── Layout constants ──────────────────────────────────────────────
 const W      = 860;
@@ -73,10 +75,14 @@ function dur(d: string): string {
 
     <section class="circuit-section">
 
-      <img
-        src="/rootkit-image.png"
+      <Image
+        src={rootkitImage}
         alt="WLKOM rootkit pixel art"
-        style="width:480px;height:auto;image-rendering:pixelated;display:block;border-radius:0;margin:0 auto;"
+        width={480}
+        height={262}
+        loading="eager"
+        fetchpriority="high"
+        style="image-rendering:pixelated;display:block;border-radius:0;margin:0 auto;"
       />
 
       <svg viewBox={`0 0 ${W} ${VH}`} xmlns="http://www.w3.org/2000/svg" class="tree-svg">
