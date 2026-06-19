@@ -7,6 +7,9 @@ import c2Login from '../assets/c2-login-interface.png';
 import c2DashboardOnline from '../assets/c2-dashboard-online.png';
 import dmesgImg from '../assets/dmesg.png';
 import qemuScreen from '../assets/qemu.png';
+import sshScreen from '../assets/terminal-ssh.png';
+import whoamiCommand from '../assets/whoami-command.png';
+import whoamiDashboard from '../assets/whoami-dashboard.png';
 ---
 
 <!doctype html>
@@ -291,9 +294,8 @@ mount -t 9p -o trans=virtio epirootkit /mnt/share</code></pre>
 					<pre><code>ssh root@localhost -p 10022
 # default password: root</code></pre>
 
-					<div class="placeholder">
-						<div class="placeholder-icon">📸</div>
-						<p><strong>Screenshot à ajouter :</strong> terminal SSH connecté à la VM victime, avec le prompt <code>root@archlinux</code>.</p>
+					<div class="screenshot-wrap">
+						<Image src={sshScreen} width={862} height={269} alt="SSH connected to victim VM" class="screenshot-img" />
 					</div>
 				</div>
 			</div>
@@ -521,9 +523,11 @@ ping 10.0.2.2</code></pre>
 					<p>Click <strong>+ Action</strong> on the machine card → <strong>Execute Command</strong> → type <code>whoami</code> → Send.</p>
 					<p>Within 5 seconds the result should appear in the dashboard with <code>stdout: root</code>.</p>
 
-					<div class="placeholder">
-						<div class="placeholder-icon">📸</div>
-						<p><strong>Screenshot à ajouter :</strong> résultat de la commande <code>whoami</code> dans le dashboard.</p>
+					<div class="screenshot-wrap">
+						<Image src={whoamiCommand} width={840} height={566} alt="Execute Command modal with whoami" class="screenshot-img" />
+					</div>
+					<div class="screenshot-wrap" style="margin-top:1em">
+						<Image src={whoamiDashboard} width={1232} height={731} alt="Dashboard showing whoami result" class="screenshot-img" />
 					</div>
 				</div>
 			</div>
