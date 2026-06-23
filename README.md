@@ -1,21 +1,20 @@
-# EpiRootkit — Documentation Blog
+# WLKOM — Documentation Blog
 
-Documentation blog for the [EpiRootkit](https://gitlab.com/epita) project — a Linux kernel rootkit (LKM) + Flask C2 server built at EPITA.
+Documentation site for the **WLKOM** project — a Linux kernel rootkit (LKM) + Flask C2 server built at EPITA for SYS2 2026.
 
-Built with [Astro v6](https://astro.build) using the blog template, dark-themed with neon green accents.
+Built with [Astro v6](https://astro.build) + [Starlight 0.40](https://starlight.astro.build) — sidebar navigation, dark/light theme, full-text search, and FR/EN language toggle included out of the box.
 
 ## Prerequisites
 
 - **Node.js** ≥ 18 — [nodejs.org](https://nodejs.org)
 - **npm** ≥ 9 (bundled with Node)
 
-Check your versions:
 ```sh
-node -v
-npm -v
+node -v   # must be ≥ 18
+npm -v    # must be ≥ 9
 ```
 
-## Setup
+## Quick start
 
 ```sh
 # 1. Clone the repo
@@ -27,56 +26,74 @@ npm install
 
 # 3. Start the dev server
 npm run dev
-# → http://localhost:4321
+# → open http://localhost:4321
 ```
 
 ## Commands
 
-All commands are run from the project root:
+| Command           | Action                                           |
+| :---------------- | :----------------------------------------------- |
+| `npm install`     | Install dependencies                             |
+| `npm run dev`     | Start dev server at `localhost:4321`             |
+| `npm run build`   | Build production site to `./dist/`               |
+| `npm run preview` | Preview the production build locally             |
 
-| Command           | Action                                      |
-| :---------------- | :------------------------------------------ |
-| `npm install`     | Install dependencies                        |
-| `npm run dev`     | Start dev server at `localhost:4321`        |
-| `npm run build`   | Build production site to `./dist/`          |
-| `npm run preview` | Preview the production build locally        |
+## Project structure
 
-## Project Structure
-
-```text
-src/
-├── assets/           # fonts, images (pixel art rootkit image, etc.)
-├── components/       # Header, Footer, HeaderLink
-├── layouts/
-│   ├── BlogPost.astro       # blog post layout
-│   ├── FeaturePage.astro    # shared layout for all feature pages
-│   └── Layout.astro         # base HTML layout
-├── pages/
-│   ├── index.astro          # home page
-│   ├── rootkit.astro        # rootkit overview + SVG feature tree
-│   ├── architecture.astro   # system architecture
-│   ├── setup.astro          # VM setup guide
-│   ├── features/
-│   │   ├── c2-server.astro
-│   │   ├── connection.astro
-│   │   ├── exec.astro
-│   │   ├── upload-download.astro
-│   │   ├── reverse-shell.astro
-│   │   ├── hide-module.astro
-│   │   ├── hide-files.astro
-│   │   └── hide-lines.astro
-│   └── blog/                # markdown/MDX blog posts
-├── content/
-│   └── blog/                # .md / .mdx post files
-public/                      # static assets (favicon, etc.)
-astro.config.mjs
-package.json
-tsconfig.json
+```
+project-blog-doc/
+├── astro.config.mjs          # Starlight config: sidebar, i18n, social links
+├── src/
+│   ├── content.config.ts     # Content collection schema (Starlight)
+│   ├── content/
+│   │   ├── docs/             # English pages (default locale)
+│   │   │   ├── index.mdx     # Home page
+│   │   │   ├── architecture.md
+│   │   │   ├── setup.md
+│   │   │   ├── c2-server.md
+│   │   │   ├── choices.md
+│   │   │   └── rootkit/
+│   │   │       ├── index.md
+│   │   │       ├── connection.md
+│   │   │       ├── exec.md
+│   │   │       ├── upload-download.md
+│   │   │       ├── reverse-shell.md
+│   │   │       ├── hide-module.md
+│   │   │       ├── hide-files.md
+│   │   │       └── hide-lines.md
+│   │   ├── docs/fr/          # French translations (same structure)
+│   │   └── i18n/
+│   │       └── fr.json       # French UI strings (search, nav labels…)
+└── public/                   # Static images referenced in docs
 ```
 
-## Deploy to Vercel
+## Editing content
 
-The easiest way to host this blog:
+All pages are plain Markdown (`.md`) or MDX (`.mdx`) files under `src/content/docs/`.
+
+**Add a new English page:**
+1. Create `src/content/docs/my-page.md` with a frontmatter title:
+   ```md
+   ---
+   title: My Page
+   description: One-line description for SEO.
+   ---
+   ```
+2. Add it to the `sidebar` array in `astro.config.mjs`.
+
+**Add a French translation:**
+- Mirror the file at `src/content/docs/fr/my-page.md`.
+- Sidebar labels for FR are set via the `translations: { fr: '...' }` key in `astro.config.mjs`.
+
+**Add images:**
+- Put images in `public/` (e.g. `public/screenshot.png`).
+- Reference them in Markdown with an absolute path: `![alt](/screenshot.png)`.
+
+## Internationalization (FR/EN)
+
+The language toggle is built into the Starlight header — no extra setup needed. English is the default locale (pages live at `/`), French at `/fr/`. Starlight handles routing automatically.
+
+## Deploy to Vercel
 
 1. Push the repo to GitHub
 2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import this repo
@@ -85,7 +102,7 @@ The easiest way to host this blog:
 
 ## Deploy to GitHub Pages
 
-Update `astro.config.mjs`:
+Update `site` in `astro.config.mjs`:
 ```js
 export default defineConfig({
   site: 'https://ariianel.github.io',

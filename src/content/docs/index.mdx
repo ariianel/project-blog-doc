@@ -1,0 +1,48 @@
+---
+title: WLKOM — Linux Kernel Rootkit
+description: A pedagogical Linux kernel rootkit (LKM) paired with a Flask C2 server, built at EPITA SYS2 2026.
+template: splash
+hero:
+  title: Wild Linux Kernel Object Module
+  tagline: A Linux kernel rootkit (LKM) + web-based C2 server built to understand how rootkits work at the kernel level. EPITA SYS2 · 2026.
+  actions:
+    - text: Get Started
+      link: /setup
+      icon: right-arrow
+      variant: primary
+    - text: Architecture
+      link: /architecture
+      icon: open-book
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## What is WLKOM?
+
+WLKOM is a **Linux Kernel Module (LKM)** acting as a rootkit. Once loaded on a victim machine, it silently connects to a command-and-control (C2) server and awaits instructions — all while hiding itself from the system.
+
+<CardGrid>
+  <Card title="C2 Server" icon="laptop">
+    A Flask web application running on the attacker's machine. Provides a real-time dashboard to manage victim machines, dispatch commands, and transfer files.
+
+    **Python · Flask · SQLite · AJAX**
+  </Card>
+  <Card title="Rootkit (LKM)" icon="puzzle">
+    A Linux Kernel Module loaded on the victim machine. Polls the C2 every 5 seconds, executes commands in kernel space, transfers files, and hides itself from userland tools.
+
+    **C · Linux Kernel · HTTP/1.0 · Syscall hooks**
+  </Card>
+</CardGrid>
+
+## Team
+
+| Member | Contributions |
+|--------|--------------|
+| Ariane Luc | Upload/Download · AJAX polling · Doxygen |
+| Daniel Janson | Architecture · C2 server · VM setup · Connection |
+| Kealan Murphy Molas | Command execution · Hide files · Hide lines |
+| Tom Rioult Denorme | Persistence |
+
+:::caution[Educational project]
+WLKOM was built at EPITA to understand how rootkits operate at the kernel level. Running it on any machine without explicit authorization is illegal.
+:::
