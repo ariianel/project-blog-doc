@@ -1,84 +1,52 @@
 ---
 title: Architecture
-description: How the C2 server and the rootkit are structured and communicate.
+description: How the two virtual machines are structured and communicate.
 ---
 
-WLKOM is split into two components running on separate virtual machines hosted on the same physical laptop via QEMU/KVM. The victim VM loads the kernel module, which connects back to the C2 server and polls for instructions every 5 seconds.
+Two virtual machines communicate over a network:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                HOST MACHINE (Arch Linux)                     │
-│                                                             │
-│  ┌──────────────────────┐      ┌───────────────────────┐   │
-│  │    ATTACKER VM       │      │      VICTIM VM        │   │
-│  │                      │      │                       │   │
-│  │  Flask C2 Server     │      │  Kernel Space         │   │
-│  │  Python · SQLite     │◄────►│  wlkom.ko (LKM)       │   │
-│  │  REST API + Web UI   │      │  c2_poll kthread      │   │
-│  │  0.0.0.0:5000        │      │  Arch Linux           │   │
-│  └──────────────────────┘      └───────────────────────┘   │
-│              HTTP/1.0  ·  10.0.2.2:5000                     │
-│                     QEMU / KVM                              │
-└─────────────────────────────────────────────────────────────┘
-```
+- **Victim VM** (Arch Linux, QEMU/KVM) — runs the `wlkom.ko` kernel module
+- **Attacking VM** (Linux, QEMU/KVM) — runs the attacking program (C2 server)
 
-## C2 API Protocol
+On load, the rootkit hides itself from the module list, registers with the C2 server, and polls it every 5 seconds for commands to execute on the victim.
 
-The rootkit communicates with the C2 server over plain **HTTP/1.0**, implemented entirely in kernel space.
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 276" style="width:100%;max-width:760px;display:block;margin:1.5rem auto;font-family:monospace;">
+  <defs>
+    <marker id="al" markerWidth="8" markerHeight="6" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#60a5fa"/></marker>
+  </defs>
+  <rect x="4" y="4" width="752" height="268" rx="8" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="8,4"/>
+  <text x="380" y="23" text-anchor="middle" fill="#64748b" font-size="10" letter-spacing="2">HOST MACHINE</text>
+  <rect x="18" y="32" width="316" height="220" rx="6" fill="#0f172a" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="176" y="54" text-anchor="middle" fill="#93c5fd" font-size="11" font-weight="bold">ATTACKING VM</text>
+  <line x1="18" y1="62" x2="334" y2="62" stroke="#1e3a5f" stroke-width="1"/>
+  <text x="176" y="80" text-anchor="middle" fill="#e2e8f0" font-size="10" font-weight="bold">Flask C2 Server</text>
+  <text x="176" y="96" text-anchor="middle" fill="#4ade80" font-size="10">port :5000</text>
+  <text x="176" y="113" text-anchor="middle" fill="#94a3b8" font-size="9">Web dashboard</text>
+  <text x="176" y="129" text-anchor="middle" fill="#94a3b8" font-size="9">SQLite (actions, results, transfers)</text>
+  <line x1="28" y1="143" x2="324" y2="143" stroke="#1e293b" stroke-width="1"/>
+  <text x="176" y="158" text-anchor="middle" fill="#475569" font-size="8" font-weight="bold" letter-spacing="1">PORT FORWARDING</text>
+  <text x="176" y="175" text-anchor="middle" fill="#94a3b8" font-size="9">:10023  →  :22   (SSH)</text>
+  <text x="176" y="191" text-anchor="middle" fill="#94a3b8" font-size="9">:5000   →  :5000  (C2)</text>
+  <text x="176" y="207" text-anchor="middle" fill="#94a3b8" font-size="9">:9000-9500  →  :9000-9500  (reverse shells)</text>
+  <rect x="426" y="32" width="316" height="220" rx="6" fill="#0f172a" stroke="#f87171" stroke-width="1.5"/>
+  <text x="584" y="54" text-anchor="middle" fill="#fca5a5" font-size="11" font-weight="bold">VICTIM VM</text>
+  <line x1="426" y1="62" x2="742" y2="62" stroke="#3f1f1f" stroke-width="1"/>
+  <text x="584" y="80" text-anchor="middle" fill="#e2e8f0" font-size="10" font-weight="bold">wlkom.ko (LKM)</text>
+  <text x="584" y="96" text-anchor="middle" fill="#4ade80" font-size="10">polls C2 every 5 s</text>
+  <line x1="436" y1="110" x2="732" y2="110" stroke="#3f1f1f" stroke-width="1"/>
+  <text x="584" y="125" text-anchor="middle" fill="#475569" font-size="8" font-weight="bold" letter-spacing="1">PORT FORWARDING</text>
+  <text x="584" y="142" text-anchor="middle" fill="#94a3b8" font-size="9">:10022  →  :22  (SSH)</text>
+  <line x1="424" y1="96" x2="338" y2="96" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#al)"/>
+  <text x="381" y="89" text-anchor="middle" fill="#60a5fa" font-size="8">HTTP polling</text>
+</svg>
 
-| Method | Route | Direction | Description |
-|--------|-------|-----------|-------------|
-| GET | `/register` | rootkit → C2 | Module registers on load. Server returns a UUID (plain text). |
-| GET | `/api/<uuid>/action` | rootkit → C2 | Polled every 5 s. Returns next pending action or `204` if none. |
-| POST | `/api/<uuid>/result` | rootkit → C2 | Posts command output back. Body: `exit_code`, `stdout`, `stderr`. |
-| POST | `/api/<uuid>/file/<path_b64>` | rootkit → C2 | Rootkit sends a file to C2 (download action). Path encoded as URL-safe base64. |
-| GET | `/api/<uuid>/file/<path_b64>` | C2 → rootkit | Rootkit fetches a staged file (upload action). |
-
-### Communication flow
-
-On load, the rootkit:
-1. Sends `GET /register` → receives a UUID, saves it to `/rootkit/uuid`
-2. Spawns a `kthread` (`c2_poll_fn`) that loops every 5 s
-3. Each tick: `GET /api/<uuid>/action` → `204` (nothing) or `200 "exec:ls -la"` (action)
-4. On action received: execute, then `POST /api/<uuid>/result`
-
-:::note[Why URL-safe base64 for file paths?]
-File paths like `/etc/passwd` contain `/` which breaks URL routing. Standard base64 also uses `+` and `/` (reserved in URLs). URL-safe base64 replaces them with `-` and `_`, making the path safe to embed in a URL segment without additional encoding logic in kernel space.
-:::
-
-## Kernel module structure
-
-The rootkit is split into focused translation units, each responsible for one feature.
+## Source layout
 
 | File | Role |
 |------|------|
-| `wlkom_main.c` | Module entry point — calls `hide_module()` then `c2_init()` on load |
-| `c2.c` | HTTP/1.0 client, registration, action polling, result posting, file transfer |
-| `exec.c` | Command execution via `call_usermodehelper()` and reverse shell |
-| `hide.c` | Removes the module from `lsmod`, `/proc/modules`, and `/sys/module/` |
-| `utils.c` | Kernel VFS helpers — `read_file()` and `write_file()` |
-| `hook.c` | Syscall table hooking: `getdents64` (hide files) and `read()` (hide lines) |
-
-![dmesg output after insmod wlkom.ko](/dmesg.png)
-
-## Technology choices
-
-**C — Kernel Module**
-The Linux kernel only exposes a C API. Kernel modules must be written in C (or assembly). No standard library, no malloc, no userspace — everything goes through kernel APIs (`kmalloc`, `printk`, `sock_create_kern`…).
-
-**Python — C2 Server**
-Flask allows rapid development of an HTTP API with a web frontend. SQLite via the standard `sqlite3` module gives persistent storage without extra setup. The entire server runs in a single process.
-
-**QEMU/KVM — Virtualization**
-Required by the subject. QEMU/KVM provides hardware virtualization on the school's Arch Linux laptops. The victim VM uses user-mode networking; the host is reachable from the VM at `10.0.2.2`, passed as the `c2_host` parameter at `insmod` time.
-
-**Arch Linux — Distribution**
-Chosen for both VMs because it matches the school laptops, ships with a recent kernel, and provides the `linux-headers` package needed to compile out-of-tree kernel modules against the running kernel version.
-
-:::note[Why kernel 6.6 LTS specifically?]
-Recent kernels enforce stricter security policies — lockdown mode and restricted `/proc/kallsyms` access make syscall hooking significantly harder without disabling specific kernel features. Our implementation targets **Linux 6.6 LTS** (the default on current Arch), which still allows the syscall table manipulation used by the hide feature without requiring Secure Boot or lockdown mode to be disabled. See [Design Choices](/choices) for the full breakdown.
-:::
-
-## C2 Dashboard
-
-![WLKOM C2 dashboard](/c2-dashboard.png)
+| `src/wlkom_main.c` | Module entry/exit, calls hide and C2 init |
+| `src/hide.c` | Removes the module from `lsmod` / `/proc/modules` / sysfs; hooks `read` to hide `wlkom.conf` |
+| `src/c2.c` | C2 registration, UUID persistence, polling thread |
+| `src/exec.c` | Command execution (`call_usermodehelper`) and plain reverse shell |
+| `src/eshell.c` | XOR-encrypted interactive shell (auth + framed protocol) |
+| `src/utils.c` | Filesystem helpers: `read_file`, `write_file`, `ensure_rootkit_dir` |

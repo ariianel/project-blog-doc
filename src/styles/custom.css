@@ -1,0 +1,33 @@
+.team-grid {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 2rem 0;
+  align-items: flex-start;
+}
+
+.team-card {
+  text-align: center;
+  width: 130px;
+  margin-top: 0 !important;
+}
+
+.team-card + .team-card {
+  margin-top: 0 !important;
+}
+
+.team-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  margin: 0 auto;
+}
+
+.team-name {
+  margin-top: 0.75rem !important;
+  margin-bottom: 0 !important;
+  font-weight: 600;
+}
